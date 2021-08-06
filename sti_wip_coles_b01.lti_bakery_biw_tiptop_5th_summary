@@ -1,0 +1,88 @@
+
+select
+
+--first part include the main columns of biw data - for this version now include standardised year month and period 
+
+m.wk_start_dt,
+m.week_end_dt_a2,
+m.loc_idnt,
+m.supp_idnt,
+m.item_idnt,
+m.sum_qty,
+m.avg_unit_cost,
+m.sum_total_am,
+m.accounting_year,
+m.accounting_period,
+m.accounting_week,
+
+/*--second part now include hierarchy information so the future summary could be grouped by higher hierarchy, as well as 
+--r2.dept_idnt,
+--r2.item_desc,
+
+--third part include location reference to state
+
+--r3.bus_regn_idnt,
+
+-- roll up value of claimed amount and quantity*/
+
+ sum(r.total_tran_qty) as sum_tran_qty, 
+ 
+ sum(r.total_net_amt) as sum_net_amt,
+ 
+-- determine variance of biw value and rolled up value
+ 
+ m.sum_total_am - coalesce(sum(r.total_net_amt),0) as var
+ 
+into sti_wip_coles_b01.lti_bakery_biw_tiptop_5th_summary
+
+from sti_wip_coles_b01.lti_bakery_biw_tiptop_date_202108_v2_temp4 m
+
+-- full outer join for path related to ap claim details
+
+full outer join 
+
+(
+
+select * 
+
+FROM sti_wip_coles_b01.lti_bakery_ap_detail_weekly_202108
+
+where supp_idnt = '920782' --and loc_idnt = '335'
+
+) r
+
+on m.supp_idnt = r.supp_idnt and m.item_idnt = r.item_idnt and m.loc_idnt = r.loc_idnt and r.claim_advice_dt between m.wk_start_dt  and m.week_end_dt_a2
+
+/*
+-- left join on item reference to dept 
+
+--left join sti_wip_coles_b01.lti_bakery_item r2
+
+--on m.item_idnt = r. item_idnt 
+
+-- left join location reference to state
+
+--left join sti_wip_coles_b01.lti_bakery_location r3
+
+--on m.loc_idnt = r3.loc_idnt
+*/
+
+where m.supp_idnt = '920782' --and m.loc_idnt = '335'
+
+group by
+m.wk_start_dt,
+m.week_end_dt_a2,
+m.loc_idnt,
+m.supp_idnt,
+m.item_idnt,
+m.sum_qty,
+m.avg_unit_cost,
+m.sum_total_am,
+m.accounting_year,
+m.accounting_period,
+m.accounting_week,
+/*--r2.dept_idnt,
+--r2.item_desc,
+--r3.bus_regn_idnt*/
+
+--order by supp_idnt, loc_idnt, item_idnt, wk_start_dt
